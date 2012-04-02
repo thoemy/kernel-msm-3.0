@@ -2407,7 +2407,7 @@ early_param("audio_size", audio_size_setup);
 
 static void __init qsd8x50_init(void)
 {
-	msm_clock_init(&qds8x50_clock_init_data);
+	msm_clock_init(&qsd8x50_clock_init_data);
 	qsd8x50_cfg_smc91x();
 	acpuclk_init(&acpuclk_8x50_soc_data);
 

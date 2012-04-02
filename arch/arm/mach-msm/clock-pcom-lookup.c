@@ -507,7 +507,7 @@ static struct clk_lookup msm_clocks_8x50[] = {
 	CLK_LOOKUP("iface_clk",		gsbi_p_clk.c,	"qup_i2c.4"),
 };
 
-struct clock_init_data qds8x50_clock_init_data __initdata = {
+struct clock_init_data qsd8x50_clock_init_data __initdata = {
 	.table = msm_clocks_8x50,
 	.size = ARRAY_SIZE(msm_clocks_8x50),
 };
