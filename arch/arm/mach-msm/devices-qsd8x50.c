@@ -34,6 +34,7 @@
 #include <mach/usbdiag.h>
 #include <mach/rpc_hsusb.h>
 #include "pm.h"
+#include "irq.h"
 
 static struct resource resources_uart1[] = {
 	{
