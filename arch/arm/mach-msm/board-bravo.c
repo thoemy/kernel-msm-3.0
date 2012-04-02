@@ -56,7 +56,6 @@ static void __init bravo_init(void)
     printk("bravo_init() revision=%d\n", system_rev);
     msm_clock_init(&qsd8x50_clock_init_data);
     //qsd8x50_init_gpiomux(board_data->gpiomux_cfgs);
-    bravo_reset();
 }
 
 static void __init bravo_fixup(struct machine_desc *desc, struct tag *tags,
