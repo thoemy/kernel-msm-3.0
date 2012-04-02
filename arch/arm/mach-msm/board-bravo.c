@@ -45,6 +45,30 @@ static uint debug_uart;
 
 module_param_named(debug_uart, debug_uart, uint, 0);
 
+#define ATAG_BDADDR 0x43294329  /* bravo bluetooth address tag */
+#define ATAG_BDADDR_SIZE 4
+#define BDADDR_STR_SIZE 18
+
+static char bdaddr[BDADDR_STR_SIZE];
+
+module_param_string(bdaddr, bdaddr, sizeof(bdaddr), 0400);
+MODULE_PARM_DESC(bdaddr, "bluetooth address");
+
+static int __init parse_tag_bdaddr(const struct tag *tag)
+{
+	unsigned char *b = (unsigned char *)&tag->u;
+
+	if (tag->hdr.size != ATAG_BDADDR_SIZE)
+		return -EINVAL;
+
+	snprintf(bdaddr, BDADDR_STR_SIZE, "%02X:%02X:%02X:%02X:%02X:%02X",
+			b[0], b[1], b[2], b[3], b[4], b[5]);
+
+	return 0;
+}
+
+__tagtable(ATAG_BDADDR, parse_tag_bdaddr);
+
 static void bravo_reset(void)
 {
     printk("bravo_reset()\n");
