@@ -558,6 +558,23 @@ config MACH_QSD8X50_FFA
 	help
 	  Support for the Qualcomm QSD8x50 FFA eval board.
 
+config MACH_BRAVO
+	depends on ARCH_QSD8X50
+	depends on MSM_SOC_REV_NONE
+	depends on MSM_STACKED_MEMORY
+	default n
+	bool "HTC Bravo GSM"
+	help
+		Select this to support the Bravo GSM device
+
+config MACH_BRAVOC
+	depends on ARCH_QSD8X50
+	depends on MSM_SOC_REV_NONE
+	depends on MSM_STACKED_MEMORY
+	default n
+	bool "HTC Bravo CDMA"
+	help
+		Select this to support the Bravo CDMA device
 config MACH_MSM7X25_SURF
 	depends on ARCH_MSM7X25
 	depends on !MSM_STACKED_MEMORY
@@ -1104,7 +1121,7 @@ config HTC_PWRSINK
 
 config QSD_SVS
 	bool "QSD Static Voltage Scaling"
-	depends on (MACH_QSD8X50_SURF || MACH_QSD8X50_FFA)
+	depends on (MACH_QSD8X50_SURF || MACH_QSD8X50_FFA || MACH_BRAVO || MACH_BRAVOC)
 	default y
 	select TPS65023
 	help
@@ -1112,7 +1129,7 @@ config QSD_SVS
 
 config QSD_PMIC_DEFAULT_DCDC1
 	int "PMIC default output voltage"
-	depends on (MACH_QSD8X50_SURF || MACH_QSD8X50_FFA)
+	depends on (MACH_QSD8X50_SURF || MACH_QSD8X50_FFA || MACH_BRAVO || MACH_BRAVOC)
 	default 1250
 	help
 	  This is the PMIC voltage at Linux kernel boot.

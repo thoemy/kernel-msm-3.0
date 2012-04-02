@@ -949,3 +949,30 @@ struct platform_device msm_kgsl_3d0 = {
 	},
 };
 
+
+static struct resource gpio_resources[] = {
+	{
+		.start  = INT_GPIO_GROUP1,
+		.flags  = IORESOURCE_IRQ,
+	},
+	{
+		.start  = INT_GPIO_GROUP2,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device msm_device_gpio = {
+	.name	   = "msmgpio",
+	.id	     = -1,
+	.resource       = gpio_resources,
+	.num_resources  = ARRAY_SIZE(gpio_resources),
+};
+
+static int __init qsd8x50_init_gpio(void)
+{
+    printk("qsd8x50_init_gpio(void)\n");
+	platform_device_register(&msm_device_gpio);
+	return 0;
+}
+
+postcore_initcall(qsd8x50_init_gpio);

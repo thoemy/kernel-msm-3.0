@@ -26,11 +26,13 @@ params_phys-$(CONFIG_ARCH_MSM8625)	:= 0x00200100
 params_phys-$(CONFIG_ARCH_MSM7X30)	:= 0x00200100
 initrd_phys-$(CONFIG_ARCH_MSM7X30)	:= 0x01200000
 
-ifeq ($(CONFIG_MSM_SOC_REV_A),y)
 # QSD8x50
    zreladdr-$(CONFIG_ARCH_QSD8X50)	:= 0x20008000
 params_phys-$(CONFIG_ARCH_QSD8X50)	:= 0x20000100
+ifeq ($(CONFIG_MSM_SOC_REV_A),y)
 initrd_phys-$(CONFIG_ARCH_QSD8X50)	:= 0x24000000
+#else
+initrd_phys-$(CONFIG_ARCH_QSD8X50)	:= 0x21000000
 endif
 
 # MSM8x60

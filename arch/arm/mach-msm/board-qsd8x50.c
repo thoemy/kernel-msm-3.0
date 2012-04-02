@@ -103,7 +103,6 @@ static struct resource smc91x_resources[] = {
 		.flags  = IORESOURCE_IRQ,
 	},
 };
-
 #ifdef CONFIG_USB_FUNCTION
 static struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
 	.nluns          = 0x02,
@@ -371,8 +370,8 @@ static void msm_fsusb_setup_gpio(unsigned int enable)
 
 #define MSM_USB_BASE              ((unsigned)addr)
 
-static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 #ifdef CONFIG_USB_FUNCTION
+static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.version	= 0x0100,
 	.phy_info	= (USB_PHY_INTEGRATED | USB_PHY_MODEL_180NM),
 	.vendor_id          = 0x5c6,
@@ -385,8 +384,8 @@ static struct msm_hsusb_platform_data msm_hsusb_pdata = {
 	.num_functions	= ARRAY_SIZE(usb_functions_map),
 	.config_gpio    = NULL,
 
-#endif
 };
+#endif
 
 static struct vreg *vreg_usb;
 static void msm_hsusb_vbus_power(unsigned phy_info, int on)
@@ -1754,7 +1753,6 @@ static int msm_hsusb_pmic_notif_init(void (*callback)(int online), int init)
 }
 static int msm_hsusb_ldo_init(int init);
 static int msm_hsusb_ldo_enable(int enable);
-
 static struct msm_otg_platform_data msm_otg_pdata = {
 	.rpc_connect	= hsusb_rpc_connect,
 	.pmic_vbus_notif_init         = msm_hsusb_pmic_notif_init,
@@ -1769,7 +1767,6 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 	.ldo_init		 = msm_hsusb_ldo_init,
 	.ldo_enable		 = msm_hsusb_ldo_enable,
 };
-
 static struct msm_hsusb_gadget_platform_data msm_gadget_pdata;
 
 static struct platform_device *devices[] __initdata = {
@@ -1974,8 +1971,9 @@ static void __init qsd8x50_init_usb(void)
 		       __func__, PTR_ERR(vreg_usb));
 		return;
 	}
-
+#ifdef CONFIG_USB_FUNCTION
 	platform_device_register(&msm_device_hsusb_otg);
+#endif
 	msm_add_host(0, &msm_usb_host_pdata);
 #ifdef CONFIG_USB_FS_HOST
 	if (fsusb_gpio_init())
@@ -2117,6 +2115,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 }
 
 #endif
+
 #if (defined(CONFIG_MMC_MSM_SDC1_SUPPORT)\
 	|| defined(CONFIG_MMC_MSM_SDC2_SUPPORT)\
 	|| defined(CONFIG_MMC_MSM_SDC4_SUPPORT))
@@ -2201,7 +2200,6 @@ static struct mmc_platform_data qsd8x50_sdc4_data = {
 	.nonremovable	= 0,
 };
 #endif
-
 static void __init qsd8x50_init_mmc(void)
 {
 	if (machine_is_qsd8x50_ffa())
@@ -2230,7 +2228,6 @@ static void __init qsd8x50_init_mmc(void)
 		msm_add_sdcc(4, &qsd8x50_sdc4_data);
 #endif
 	}
-
 }
 
 static void __init qsd8x50_cfg_smc91x(void)
@@ -2410,12 +2407,12 @@ static void __init qsd8x50_init(void)
 	msm_clock_init(&qsd8x50_clock_init_data);
 	qsd8x50_cfg_smc91x();
 	acpuclk_init(&acpuclk_8x50_soc_data);
-
+#ifdef CONFIG_USB_FUNCTION
 	msm_hsusb_pdata.swfi_latency =
 		msm_pm_data
 		[MSM_PM_SLEEP_MODE_RAMP_DOWN_AND_WAIT_FOR_INTERRUPT].latency;
 	msm_device_hsusb_peripheral.dev.platform_data = &msm_hsusb_pdata;
-
+#endif
 	msm_otg_pdata.swfi_latency =
 		msm_pm_data
 		[MSM_PM_SLEEP_MODE_RAMP_DOWN_AND_WAIT_FOR_INTERRUPT].latency;
