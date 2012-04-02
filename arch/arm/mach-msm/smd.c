@@ -1318,6 +1318,26 @@ void smd_sleep_exit(void)
 }
 EXPORT_SYMBOL(smd_sleep_exit);
 
+void smd_kick(smd_channel_t *ch)
+{
+	unsigned long flags;
+	unsigned tmp;
+
+	spin_lock_irqsave(&smd_lock, flags);
+	ch->update_state(ch);
+	tmp = ch->recv->state;
+	if (tmp != ch->last_state) {
+		ch->last_state = tmp;
+		if (tmp == SMD_SS_OPENED)
+			ch->notify(ch->priv, SMD_EVENT_OPEN);
+		else
+			ch->notify(ch->priv, SMD_EVENT_CLOSE);
+	}
+	ch->notify(ch->priv, SMD_EVENT_DATA);
+	ch->notify_other_cpu();
+	spin_unlock_irqrestore(&smd_lock, flags);
+}
+
 static int smd_is_packet(struct smd_alloc_elm *alloc_elm)
 {
 	if (SMD_XFER_TYPE(alloc_elm->type) == 1)

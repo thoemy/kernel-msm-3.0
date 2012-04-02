@@ -138,6 +138,11 @@ struct smd_platform {
 	struct smd_subsystem_restart_config *smd_ssr_config;
 };
 
+struct smd_tty_channel_desc {
+	int id;
+	const char *name;
+};
+
 #ifdef CONFIG_MSM_SMD
 /* warning: notify() may be called before open returns */
 int smd_open(const char *name, smd_channel_t **ch, void *priv,
@@ -172,6 +177,11 @@ int smd_read_avail(smd_channel_t *ch);
 */
 int smd_cur_packet_size(smd_channel_t *ch);
 
+/* used for tty unthrottling and the like -- causes the notify()
+** callback to be called from the same lock context as is used
+** when it is called from channel updates
+*/
+void smd_kick(smd_channel_t *ch);
 
 #if 0
 /* these are interruptable waits which will block you until the specified
@@ -180,6 +190,8 @@ int smd_cur_packet_size(smd_channel_t *ch);
 int smd_wait_until_readable(smd_channel_t *ch, int bytes);
 int smd_wait_until_writable(smd_channel_t *ch, int bytes);
 #endif
+
+int smd_set_channel_list(const struct smd_tty_channel_desc *, int len);
 
 /* these are used to get and set the IF sigs of a channel.
  * DTR and RTS can be set; DSR, CTS, CD and RI can be read.
