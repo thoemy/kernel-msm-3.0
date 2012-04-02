@@ -165,8 +165,6 @@ obj-$(CONFIG_MACH_TROUT) += board-trout.o board-trout-gpio.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-keypad.o board-trout-panel.o
 obj-$(CONFIG_MACH_TROUT) += htc_akm_cal.o htc_wifi_nvs.o htc_acoustic.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-mmc.o board-trout-wifi.o
-obj-$(CONFIG_MACH_BRAVO) += clock-pll.o board-qsd8x50.o board-bravo.o
-obj-y += htc_board_tags.o
 obj-$(CONFIG_ARCH_QSD8X50) += devices-qsd8x50.o clock-pcom-lookup.o
 obj-$(CONFIG_MACH_QSD8X50_SURF) += board-qsd8x50.o
 obj-$(CONFIG_MACH_QSD8X50_FFA) += board-qsd8x50.o
@@ -336,3 +334,9 @@ endif
 obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
+
+obj-$(CONFIG_MACH_BRAVO) += clock-pll.o board-qsd8x50.o board-bravo.o
+obj-y += htc_board_tags.o
+
+obj-y += drv_callback.o
+obj-$(CONFIG_MICROP_COMMON) += atmega_microp_common.o
