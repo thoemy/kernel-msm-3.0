@@ -450,6 +450,8 @@ void __init msm_init_irq(void)
 {
 	unsigned n;
 
+        printk("msm_init_irq()\n");
+
 	/* select level interrupts */
 	writel(0, VIC_INT_TYPE0);
 	writel(0, VIC_INT_TYPE1);
@@ -482,6 +484,7 @@ void __init msm_init_irq(void)
 
 static int __init msm_init_irq_late(void)
 {
+    printk("msm_init_irq_late()\n");
 	smsm_int_info = smem_alloc(INT_INFO_SMSM_ID, sizeof(*smsm_int_info));
 	if (!smsm_int_info)
 		pr_err("set_wakeup_mask NO INT_INFO (%d)\n", INT_INFO_SMSM_ID);

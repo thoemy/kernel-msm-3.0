@@ -125,3 +125,11 @@ void __init qsd8x50_init_gpiomux(struct msm_gpiomux_configs *cfgs)
         ++cfgs;
     }
 }
+/*
+static void __init test(void)
+{
+    qsd8x50_init_gpiomux(qsd8x50_gpiomux_cfgs);
+}
+
+postcore_initcall(test);
+*/
