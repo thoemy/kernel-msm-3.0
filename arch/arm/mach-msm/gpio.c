@@ -618,7 +618,7 @@ static int __devinit msm_gpio_probe(struct platform_device *dev)
 {
 	int i, j = 0;
 	int grp_irq;
-        printk("Probing device %s, id: %d\n", dev->name, dev->id);
+
 	for (i = FIRST_GPIO_IRQ; i < FIRST_GPIO_IRQ + NR_GPIO_IRQS; i++) {
 		if (i - FIRST_GPIO_IRQ >=
 			msm_gpio_chips[j].chip.base +

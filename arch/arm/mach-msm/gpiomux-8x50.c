@@ -105,15 +105,15 @@ static struct msm_gpiomux_config qsd8x50_sdc_configs[] __initdata = {
 };
 
 struct msm_gpiomux_configs
-qsdx50_gpiomux_cfgs[] __initdata = {
+qsd8x50_gpiomux_cfgs[] __initdata = {
     {qsd8x50_uart_configs, ARRAY_SIZE(qsd8x50_uart_configs)},
     {qsd8x50_sdc_configs, ARRAY_SIZE(qsd8x50_sdc_configs)},
+    {NULL, 0},
 };
 
 void __init qsd8x50_init_gpiomux(struct msm_gpiomux_configs *cfgs)
 {
     int rc;
-
     rc = msm_gpiomux_init(NR_GPIO_IRQS);
     if (rc) {
         pr_err("%s failure: %d\n", __func__, rc);
@@ -125,11 +125,3 @@ void __init qsd8x50_init_gpiomux(struct msm_gpiomux_configs *cfgs)
         ++cfgs;
     }
 }
-/*
-static void __init test(void)
-{
-    qsd8x50_init_gpiomux(qsd8x50_gpiomux_cfgs);
-}
-
-postcore_initcall(test);
-*/

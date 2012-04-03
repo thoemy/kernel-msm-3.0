@@ -39,12 +39,14 @@
 #include <mach/socinfo.h>
 #include <mach/msm_hsusb.h>
 #include <mach/msm_smd.h>
+#include <mach/gpiomux.h>
 
 #include "board-bravo.h"
 #include "devices.h"
 #include "proc_comm.h"
 #include "timer.h"
 #include "acpuclock.h"
+#include "gpiomux-8x50.h"
 
 void (*msm_hw_reset_hook)(void);
 
@@ -286,6 +288,8 @@ static void __init bravo_init(void)
 
 	msm_clock_init(&qsd8x50_clock_init_data);
 
+	qsd8x50_init_gpiomux(qsd8x50_gpiomux_cfgs);
+
 	acpuclk_init(&acpuclk_8x50_soc_data);
 
 	/*
@@ -294,8 +298,6 @@ static void __init bravo_init(void)
 	else
 		msm_acpu_clock_init(&bravo_clock_data);
 	*/
-
-    //qsd8x50_init_gpiomux(board_data->gpiomux_cfgs);
 }
 
 static void __init bravo_fixup(struct machine_desc *desc, struct tag *tags,
@@ -309,6 +311,13 @@ static void __init bravo_fixup(struct machine_desc *desc, struct tag *tags,
 	mi->bank[1].size = MSM_EBI1_BANK1_SIZE;
 }
 
+static void __init bravo_init_irq(void)
+{
+    printk("bravo_init_irq()\n");
+    msm_init_irq();
+    msm_init_sirc();
+}
+
 static void __init bravo_map_io(void)
 {
     printk("bravo_map_io()\n");
@@ -318,8 +327,6 @@ static void __init bravo_map_io(void)
         pr_err("socinfo_init() failed!\n");
 }
 
-extern struct sys_timer msm_timer;
-
 #ifdef CONFIG_MACH_BRAVO
 MACHINE_START(BRAVO, "bravo")
 #else
@@ -328,7 +335,7 @@ MACHINE_START(BRAVOC, "bravoc")
     .boot_params = 0x20000100,
     .fixup = bravo_fixup,
     .map_io = bravo_map_io,
-    .init_irq	= msm_init_irq,
+    .init_irq = bravo_init_irq,
     .init_machine = bravo_init,
     .timer = &msm_timer,
 MACHINE_END
