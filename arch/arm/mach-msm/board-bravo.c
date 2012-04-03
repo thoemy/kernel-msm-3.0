@@ -201,6 +201,72 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.functions = usb_functions_all,
 };
 
+static struct platform_device *devices[] __initdata = {
+
+};
+
+static struct msm_gpio bt_gpio_table[] = {
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_RTS, 2, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_CTS, 2, GPIO_CFG_INPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_RX, 2, GPIO_CFG_INPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_TX, 2, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_RESET_N, 0, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_SHUTDOWN_N, 0, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_WAKE, 0, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_HOST_WAKE, 0, GPIO_CFG_INPUT,
+              GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+};
+
+static struct msm_gpio bt_gpio_table_rev_CX[] = {
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_RTS, 2, GPIO_CFG_OUTPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_CTS, 2, GPIO_CFG_INPUT,
+              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_RX, 2, GPIO_CFG_INPUT,
+             GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_UART1_TX, 2, GPIO_CFG_OUTPUT,
+             GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_RESET_N, 0, GPIO_CFG_OUTPUT,
+             GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_SHUTDOWN_N, 0, GPIO_CFG_OUTPUT,
+             GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_CDMA_GPIO_BT_WAKE, 0, GPIO_CFG_OUTPUT,
+             GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+    {GPIO_CFG(BRAVO_GPIO_BT_HOST_WAKE, 0, GPIO_CFG_INPUT,
+             GPIO_CFG_PULL_DOWN, GPIO_CFG_4MA)},
+};
+
+static struct msm_gpio misc_gpio_table[] = {
+    { GPIO_CFG(BRAVO_GPIO_LCD_RST_N, 0, GPIO_CFG_OUTPUT,
+               GPIO_CFG_NO_PULL, GPIO_CFG_2MA)},
+    { GPIO_CFG(BRAVO_GPIO_LED_3V3_EN, 0, GPIO_CFG_OUTPUT,
+               GPIO_CFG_NO_PULL, GPIO_CFG_2MA)},
+    { GPIO_CFG(BRAVO_GPIO_DOCK, 0, GPIO_CFG_OUTPUT,
+               GPIO_CFG_NO_PULL, GPIO_CFG_4MA)},
+};
+
+static struct msm_gpio key_int_shutdown_gpio_table[] = {
+    {GPIO_CFG(BRAVO_GPIO_35MM_KEY_INT_SHUTDOWN, 0, GPIO_CFG_OUTPUT,
+              GPIO_CFG_NO_PULL, GPIO_CFG_2MA)},
+};
+
+static void bravo_headset_init(void)
+{
+	if (is_cdma_version(system_rev))
+		return;
+	msm_gpios_enable(key_int_shutdown_gpio_table,
+                         ARRAY_SIZE(key_int_shutdown_gpio_table));
+	gpio_set_value(BRAVO_GPIO_35MM_KEY_INT_SHUTDOWN, 0);
+}
+
+
 #define ATAG_BDADDR 0x43294329  /* bravo bluetooth address tag */
 #define ATAG_BDADDR_SIZE 4
 #define BDADDR_STR_SIZE 18
@@ -290,14 +356,24 @@ static void __init bravo_init(void)
 
 	qsd8x50_init_gpiomux(qsd8x50_gpiomux_cfgs);
 
+        /* TODO: CDMA version */
 	acpuclk_init(&acpuclk_8x50_soc_data);
 
-	/*
-	if (is_cdma_version(system_rev))
-		msm_acpu_clock_init(&bravo_cdma_clock_data);
-	else
-		msm_acpu_clock_init(&bravo_clock_data);
-	*/
+        msm_gpios_enable(misc_gpio_table, ARRAY_SIZE(misc_gpio_table));
+
+        if (is_cdma_version(system_rev)) {
+            //bcm_bt_lpm_pdata.gpio_wake = BRAVO_CDMA_GPIO_BT_WAKE;
+            //bravo_flashlight_data.torch = BRAVO_CDMA_GPIO_FLASHLIGHT_TORCH;
+            msm_gpios_enable(bt_gpio_table_rev_CX, ARRAY_SIZE(bt_gpio_table_rev_CX));
+	} else {
+            msm_gpios_enable(bt_gpio_table, ARRAY_SIZE(bt_gpio_table));
+	}
+
+        platform_add_devices(devices, ARRAY_SIZE(devices));
+
+        bravo_headset_init();
+
+	//bravo_reset();
 }
 
 static void __init bravo_fixup(struct machine_desc *desc, struct tag *tags,
