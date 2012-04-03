@@ -711,6 +711,11 @@ static int __init acpuclk_8x50_init(struct acpuclk_soc_data *soc_data)
 
 	drv_state.ebi1_clk = clk_get(NULL, "ebi1_acpu_clk");
 	BUG_ON(IS_ERR(drv_state.ebi1_clk));
+        /*
+         * Prepare the PLLs because we enable/disable them
+         * in atomic context during power collapse/restore.
+         */
+        BUG_ON(clk_prepare(drv_state.ebi1_clk));
 
 	acpu_freq_tbl_fixup();
 	acpuclk_hw_init();
