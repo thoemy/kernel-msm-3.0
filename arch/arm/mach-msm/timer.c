@@ -73,6 +73,9 @@ enum {
 #define LOCAL_TIMER 0
 #define GLOBAL_TIMER 1
 
+static DEFINE_SPINLOCK(msm_fast_timer_lock);
+static int msm_fast_timer_enabled;
+
 /*
  * global_timer_offset is added to the regbase of a timer to force the memory
  * access to come from the CPU0 region.
@@ -962,6 +965,66 @@ int read_current_timer(unsigned long *timer_val)
 	struct msm_clock *dgt = &msm_clocks[MSM_CLOCK_DGT];
 	*timer_val = msm_read_timer_count(dgt, GLOBAL_TIMER);
 	return 0;
+}
+
+
+/**
+ * msm_enable_fast_timer - Enable fast timer
+ *
+ * Prevents low power idle, but the caller must call msm_disable_fast_timer
+ * before suspend completes.
+ * Reference counted.
+ */
+void msm_enable_fast_timer(void)
+{
+	u32 max;
+	unsigned long irq_flags;
+	struct msm_clock *clock = &msm_clocks[MSM_CLOCK_DGT];
+
+	spin_lock_irqsave(&msm_fast_timer_lock, irq_flags);
+	if (msm_fast_timer_enabled++)
+		goto done;
+	if (msm_active_clock == &msm_clocks[MSM_CLOCK_DGT]) {
+		pr_warning("msm_enable_fast_timer: timer already in use, "
+			"returned time will jump when hardware timer wraps\n");
+		goto done;
+	}
+	max = (clock->clockevent.mult >> (clock->clockevent.shift - 32)) - 1;
+	writel(max, clock->regbase + TIMER_MATCH_VAL);
+	writel(TIMER_ENABLE_EN | TIMER_ENABLE_CLR_ON_MATCH_EN,
+		clock->regbase + TIMER_ENABLE);
+done:
+	spin_unlock_irqrestore(&msm_fast_timer_lock, irq_flags);
+}
+
+/**
+ * msm_enable_fast_timer - Disable fast timer
+ */
+void msm_disable_fast_timer(void)
+{
+	unsigned long irq_flags;
+	struct msm_clock *clock = &msm_clocks[MSM_CLOCK_DGT];
+
+	spin_lock_irqsave(&msm_fast_timer_lock, irq_flags);
+	if (!WARN(!msm_fast_timer_enabled, "msm_disable_fast_timer undeflow")
+	    && !--msm_fast_timer_enabled
+	    && msm_active_clock != &msm_clocks[MSM_CLOCK_DGT])
+		writel(0, clock->regbase + TIMER_ENABLE);
+	spin_unlock_irqrestore(&msm_fast_timer_lock, irq_flags);
+}
+
+/**
+ * msm_enable_fast_timer - Read fast timer
+ *
+ * Returns 32bit nanosecond time value.
+ */
+u32 msm_read_fast_timer(void)
+{
+	cycle_t ticks;
+	struct msm_clock *clock = &msm_clocks[MSM_CLOCK_DGT];
+	ticks = msm_read_timer_count(clock, GLOBAL_TIMER) >> MSM_DGT_SHIFT;
+	return clocksource_cyc2ns(ticks, clock->clocksource.mult,
+					clock->clocksource.shift);
 }
 
 static void __init msm_sched_clock_init(void)
