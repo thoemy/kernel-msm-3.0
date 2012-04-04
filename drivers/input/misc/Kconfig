@@ -546,4 +546,10 @@ config BOSCH_BMA150
           If you say yes here you get support for Bosch Sensortec's
           acceleration sensors SMB380/BMA150.
 
+config INPUT_CAPELLA_CM3602_HTC
+	tristate "Capella CM3602 proximity and light sensor (HTC)"
+	help
+	  Say Y here to enable the Capella CM3602 Short Distance Proximity
+	  Sensor with Ambient Light Sensor.
+
 endif
