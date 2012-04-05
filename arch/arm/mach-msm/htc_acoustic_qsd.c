@@ -54,6 +54,8 @@ static struct mutex api_lock;
 static struct mutex rpc_connect_lock;
 static struct qsd_acoustic_ops *the_ops;
 
+extern unsigned int msm_shared_ram_phys;
+
 void acoustic_register_ops(struct qsd_acoustic_ops *ops)
 {
 	the_ops = ops;
@@ -147,7 +149,7 @@ static int acoustic_mmap(struct file *file, struct vm_area_struct *vma)
 		goto done;
 	}
 
-	pgoff = MSM_SHARED_RAM_PHYS +
+	pgoff = msm_shared_ram_phys +
 		(htc_acoustic_vir_addr - (uint32_t)MSM_SHARED_RAM_BASE);
 	pgoff = ((pgoff + 4095) & ~4095);
 	htc_acoustic_vir_addr = ((htc_acoustic_vir_addr + 4095) & ~4095);
