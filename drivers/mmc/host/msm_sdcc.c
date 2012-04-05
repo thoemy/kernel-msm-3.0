@@ -4396,7 +4396,7 @@ msmsdcc_probe(struct platform_device *pdev)
 			ret = clk_set_rate(host->dfab_pclk, 64000000);
 			if (ret)
 				goto dfab_pclk_put;
-			ret = clk_enable(host->dfab_pclk);
+			ret = clk_prepare_enable(host->dfab_pclk);
 			if (ret)
 				goto dfab_pclk_put;
 		} else
@@ -4408,7 +4408,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	 */
 	host->pclk = clk_get(&pdev->dev, "iface_clk");
 	if (!IS_ERR(host->pclk)) {
-		ret = clk_enable(host->pclk);
+		ret = clk_prepare_enable(host->pclk);
 		if (ret)
 			goto pclk_put;
 
@@ -4430,7 +4430,7 @@ msmsdcc_probe(struct platform_device *pdev)
 		goto clk_put;
 	}
 
-	ret = clk_enable(host->clk);
+	ret = clk_prepare_enable(host->clk);
 	if (ret)
 		goto clk_put;
 
