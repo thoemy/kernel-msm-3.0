@@ -337,10 +337,11 @@ obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
 
 obj-$(CONFIG_MACH_BRAVO) += clock-pll.o board-qsd8x50.o board-bravo.o
+obj-$(CONFIG_MACH_BRAVO) += board-bravo-microp.o board-bravo-mmc.o
 obj-$(CONFIG_MACH_BRAVO) += htc_wifi_nvs.o htc_awb_cal.o
 obj-$(CONFIG_MACH_BRAVO) += board-bravo-tpa2018d1.o
 obj-$(CONFIG_MACH_BRAVO) += board-bravo-smb329.o
 obj-y += htc_board_tags.o
 
 obj-y += drv_callback.o
-obj-$(CONFIG_MICROP_COMMON) += atmega_microp_common.o
+#obj-$(CONFIG_MICROP_COMMON) += atmega_microp_common.o
