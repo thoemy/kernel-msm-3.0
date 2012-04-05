@@ -66,6 +66,7 @@
 #include "irq.h"
 #include "pm-boot.h"
 #include "gpiomux-8x50.h"
+#include "footswitch.h"
 
 #define SMEM_SPINLOCK_I2C	"S:6"
 
@@ -221,6 +222,14 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.num_functions = ARRAY_SIZE(usb_functions_all),
 	.functions = usb_functions_all,
 };
+
+/* start footswitch regulator */
+struct platform_device *msm_footswitch_devices[] = {
+	FS_PCOM(FS_GFX3D,  "fs_gfx3d"),
+};
+
+unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
+/* end footswitch regulator */
 
 static struct resource ram_console_resources[] = {
 	{
@@ -990,8 +999,8 @@ static void __init bravo_init(void)
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
-	//platform_add_devices(msm_footswitch_devices,
-        //                     msm_num_footswitch_devices);
+	platform_add_devices(msm_footswitch_devices,
+			msm_num_footswitch_devices);
 
         msm_device_i2c_init();
 	msm_qsd_spi_init();
@@ -1022,7 +1031,7 @@ static void __init bravo_init(void)
 static void __init bravo_fixup(struct machine_desc *desc, struct tag *tags,
 				 char **cmdline, struct meminfo *mi)
 {
-    printk("bravo_fixup(...)\n");
+	printk("bravo_fixup(...)\n");
 	mi->nr_banks = 2;
 	mi->bank[0].start = PHYS_OFFSET;
 	mi->bank[0].size = MSM_EBI1_BANK0_SIZE;
