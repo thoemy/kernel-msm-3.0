@@ -25,6 +25,8 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/reboot.h>
+#include <linux/spi/spi.h>
+#include <linux/bma150.h>
 #include <linux/platform_device.h>
 #include <linux/usb/android_composite.h>
 #include <linux/usb/f_accessory.h>
@@ -42,9 +44,11 @@
 #include <asm/setup.h>
 
 #include <mach/board.h>
+#include <mach/dma.h>
 #include <mach/hardware.h>
 #include <mach/system.h>
 #include <mach/socinfo.h>
+#include <mach/msm_spi.h>
 #include <mach/msm_hsusb.h>
 #include <mach/msm_smd.h>
 #include <mach/gpiomux.h>
@@ -59,6 +63,8 @@
 #include "timer.h"
 #include "acpuclock.h"
 #include "pm.h"
+#include "irq.h"
+#include "pm-boot.h"
 #include "gpiomux-8x50.h"
 
 #define SMEM_SPINLOCK_I2C	"S:6"
@@ -540,7 +546,7 @@ static struct platform_device *devices[] __initdata = {
 
 static struct msm_gpio bt_gpio_table[] = {
     {GPIO_CFG(BRAVO_GPIO_BT_UART1_RTS, 2, GPIO_CFG_OUTPUT,
-              GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
+              GPIO_CFG_PULL_UP,  GPIO_CFG_8MA)},
     {GPIO_CFG(BRAVO_GPIO_BT_UART1_CTS, 2, GPIO_CFG_INPUT,
               GPIO_CFG_PULL_UP, GPIO_CFG_8MA)},
     {GPIO_CFG(BRAVO_GPIO_BT_UART1_RX, 2, GPIO_CFG_INPUT,
@@ -664,11 +670,22 @@ static void bravo_reset(void)
     printk("bravo_reset()\n");
 	gpio_set_value(BRAVO_GPIO_PS_HOLD, 0);
 };
+/*
+static struct smd_config smd_cdma_default_channels[] = {
+	{0, "DS", NULL, SMD_APPS_MODEM},
+	{19, "DATA3", NULL, SMD_APPS_MODEM},
+	{27, "GPSNMEA", NULL, SMD_APPS_MODEM},
+};
 
-static const struct smd_tty_channel_desc smd_cdma_default_channels[] = {
-	{ .id = 0, .name = "SMD_DS" },
-	{ .id = 19, .name = "SMD_DATA3" },
-	{ .id = 27, .name = "SMD_GPSNMEA" }
+static struct smd_config smd_gsm_default_channels[] = {
+	{0, "DS", NULL, SMD_APPS_MODEM},
+	{27, "GPSNMEA", NULL, SMD_APPS_MODEM},
+};
+*/
+
+static struct msm_pm_boot_platform_data msm_pm_boot_pdata __initdata = {
+	.mode = MSM_PM_BOOT_CONFIG_RESET_VECTOR_VIRT,
+	.v_addr = (unsigned int *)PAGE_OFFSET,
 };
 
 static void
@@ -762,15 +779,180 @@ static void __init msm_device_i2c_init(void)
 	msm_device_i2c.dev.platform_data = &msm_i2c_pdata;
 }
 
+static struct msm_gpio bma_spi_gpio_config_data[] = {
+	{ GPIO_CFG(22, 0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "bma_irq" },
+};
+
+static int msm_bma_gpio_setup(struct device *dev)
+{
+	int rc;
+
+	rc = msm_gpios_request_enable(bma_spi_gpio_config_data,
+		ARRAY_SIZE(bma_spi_gpio_config_data));
+
+	return rc;
+}
+
+static void msm_bma_gpio_teardown(struct device *dev)
+{
+	msm_gpios_disable_free(bma_spi_gpio_config_data,
+		ARRAY_SIZE(bma_spi_gpio_config_data));
+}
+
+static struct bma150_platform_data bma_pdata = {
+	.setup    = msm_bma_gpio_setup,
+	.teardown = msm_bma_gpio_teardown,
+};
+
+static struct resource qsd_spi_resources[] = {
+	{
+		.name   = "spi_irq_in",
+		.start	= INT_SPI_INPUT,
+		.end	= INT_SPI_INPUT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name   = "spi_irq_out",
+		.start	= INT_SPI_OUTPUT,
+		.end	= INT_SPI_OUTPUT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name   = "spi_irq_err",
+		.start	= INT_SPI_ERROR,
+		.end	= INT_SPI_ERROR,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name   = "spi_base",
+		.start	= 0xA1200000,
+		.end	= 0xA1200000 + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name   = "spidm_channels",
+		.flags  = IORESOURCE_DMA,
+	},
+	{
+		.name   = "spidm_crci",
+		.flags  = IORESOURCE_DMA,
+	},
+};
+
+static struct platform_device qsd_device_spi = {
+	.name	        = "spi_qsd",
+	.id	        = 0,
+	.num_resources	= ARRAY_SIZE(qsd_spi_resources),
+	.resource	= qsd_spi_resources,
+};
+
+static struct spi_board_info msm_spi_board_info[] __initdata = {
+	{
+		.modalias	= "bma150",
+		.mode		= SPI_MODE_3,
+		.irq		= MSM_GPIO_TO_INT(22),
+		.bus_num	= 0,
+		.chip_select	= 0,
+		.max_speed_hz	= 10000000,
+		.platform_data	= &bma_pdata,
+	},
+};
+
+#define CT_CSR_PHYS		0xA8700000
+#define TCSR_SPI_MUX		(ct_csr_base + 0x54)
+static int msm_qsd_spi_dma_config(void)
+{
+	void __iomem *ct_csr_base = 0;
+	u32 spi_mux;
+	int ret = 0;
+
+	ct_csr_base = ioremap(CT_CSR_PHYS, PAGE_SIZE);
+	if (!ct_csr_base) {
+		pr_err("%s: Could not remap %x\n", __func__, CT_CSR_PHYS);
+		return -1;
+	}
+
+	spi_mux = readl(TCSR_SPI_MUX);
+	switch (spi_mux) {
+	case (1):
+		qsd_spi_resources[4].start  = DMOV_HSUART1_RX_CHAN;
+		qsd_spi_resources[4].end    = DMOV_HSUART1_TX_CHAN;
+		qsd_spi_resources[5].start  = DMOV_HSUART1_RX_CRCI;
+		qsd_spi_resources[5].end    = DMOV_HSUART1_TX_CRCI;
+		break;
+	case (2):
+		qsd_spi_resources[4].start  = DMOV_HSUART2_RX_CHAN;
+		qsd_spi_resources[4].end    = DMOV_HSUART2_TX_CHAN;
+		qsd_spi_resources[5].start  = DMOV_HSUART2_RX_CRCI;
+		qsd_spi_resources[5].end    = DMOV_HSUART2_TX_CRCI;
+		break;
+	case (3):
+		qsd_spi_resources[4].start  = DMOV_CE_OUT_CHAN;
+		qsd_spi_resources[4].end    = DMOV_CE_IN_CHAN;
+		qsd_spi_resources[5].start  = DMOV_CE_OUT_CRCI;
+		qsd_spi_resources[5].end    = DMOV_CE_IN_CRCI;
+		break;
+	default:
+		ret = -1;
+	}
+
+	iounmap(ct_csr_base);
+	return ret;
+}
+
+static struct msm_gpio qsd_spi_gpio_config_data[] = {
+	{ GPIO_CFG(17, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "spi_clk" },
+	{ GPIO_CFG(18, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "spi_mosi" },
+	{ GPIO_CFG(19, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "spi_miso" },
+	{ GPIO_CFG(20, 1, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), "spi_cs0" },
+	{ GPIO_CFG(21, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_16MA), "spi_pwr" },
+};
+
+static int msm_qsd_spi_gpio_config(void)
+{
+	int rc;
+
+	rc = msm_gpios_request_enable(qsd_spi_gpio_config_data,
+		ARRAY_SIZE(qsd_spi_gpio_config_data));
+	if (rc)
+		return rc;
+
+	/* Set direction for SPI_PWR */
+	gpio_direction_output(21, 1);
+
+	return 0;
+}
+
+static void msm_qsd_spi_gpio_release(void)
+{
+	msm_gpios_disable_free(qsd_spi_gpio_config_data,
+		ARRAY_SIZE(qsd_spi_gpio_config_data));
+}
+
+static struct msm_spi_platform_data qsd_spi_pdata = {
+	.max_clock_speed = 19200000,
+	.gpio_config  = msm_qsd_spi_gpio_config,
+	.gpio_release = msm_qsd_spi_gpio_release,
+	.dma_config = msm_qsd_spi_dma_config,
+};
+
+static void __init msm_qsd_spi_init(void)
+{
+	qsd_device_spi.dev.platform_data = &qsd_spi_pdata;
+}
+
+int bravo_init_mmc(int sysrev, unsigned debug_uart);
+
 static void __init bravo_init(void)
 {
 	int ret;
 
 	printk("bravo_init() revision=%d\n", system_rev);
-
+	/*
 	if (is_cdma_version(system_rev))
 		smd_set_channel_list(smd_cdma_default_channels,
 				ARRAY_SIZE(smd_cdma_default_channels));
+	*/
 
 	msm_hw_reset_hook = bravo_reset;
 
@@ -783,25 +965,21 @@ static void __init bravo_init(void)
         /* TODO: CDMA version */
 	acpuclk_init(&acpuclk_8x50_soc_data);
 
-        msm_gpios_enable(misc_gpio_table, ARRAY_SIZE(misc_gpio_table));
+        msm_gpios_request_enable(misc_gpio_table, ARRAY_SIZE(misc_gpio_table));
 
         if (is_cdma_version(system_rev)) {
             //bcm_bt_lpm_pdata.gpio_wake = BRAVO_CDMA_GPIO_BT_WAKE;
             //bravo_flashlight_data.torch = BRAVO_CDMA_GPIO_FLASHLIGHT_TORCH;
-            msm_gpios_enable(bt_gpio_table_rev_CX, ARRAY_SIZE(bt_gpio_table_rev_CX));
+            msm_gpios_request_enable(bt_gpio_table_rev_CX, ARRAY_SIZE(bt_gpio_table_rev_CX));
 	} else {
-            msm_gpios_enable(bt_gpio_table, ARRAY_SIZE(bt_gpio_table));
+            msm_gpios_request_enable(bt_gpio_table, ARRAY_SIZE(bt_gpio_table));
 	}
 
-        gpio_request(BRAVO_GPIO_TP_LS_EN, "tp_ls_en");
+	gpio_request(BRAVO_GPIO_TP_LS_EN, "tp_ls_en");
 	gpio_direction_output(BRAVO_GPIO_TP_LS_EN, 0);
 	gpio_request(BRAVO_GPIO_TP_EN, "tp_en");
 	gpio_direction_output(BRAVO_GPIO_TP_EN, 0);
-//	gpio_request(BRAVO_GPIO_PROXIMITY_EN, "proximity_en");
-//	gpio_direction_output(BRAVO_GPIO_PROXIMITY_EN, 1);
 	gpio_request(BRAVO_GPIO_LS_EN_N, "ls_en");
-	gpio_request(BRAVO_GPIO_COMPASS_RST_N, "compass_rst");
-	gpio_direction_output(BRAVO_GPIO_COMPASS_RST_N, 1);
 	gpio_request(BRAVO_GPIO_COMPASS_INT_N, "compass_int");
 	gpio_direction_input(BRAVO_GPIO_COMPASS_INT_N);
 
@@ -816,14 +994,24 @@ static void __init bravo_init(void)
         //                     msm_num_footswitch_devices);
 
         msm_device_i2c_init();
-
+	msm_qsd_spi_init();
 	i2c_register_board_info(0, base_i2c_devices,
                                 ARRAY_SIZE(base_i2c_devices));
+	spi_register_board_info(msm_spi_board_info,
+				ARRAY_SIZE(msm_spi_board_info));
 
         if (is_cdma_version(system_rev)) {
             i2c_register_board_info(0, rev_CX_i2c_devices,
                                     ARRAY_SIZE(rev_CX_i2c_devices));
 	}
+
+	ret = bravo_init_mmc(system_rev, debug_uart);
+	if (ret != 0)
+		pr_crit("%s: Unable to initialize MMC\n", __func__);
+
+	//msm_pm_set_platform_data(msm_pm_data, ARRAY_SIZE(msm_pm_data));
+	//BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+	//msm_pm_register_irqs();
 
         bravo_headset_init();
 
