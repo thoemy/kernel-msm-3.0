@@ -2,6 +2,8 @@ In case anyone other than me reads this. There are a lot of things to do. Adding
 all neccessary drivers from older kernels and adapting the interfaces. This is
 just a list of things I noticed or is not important to fix now.
 
+Current kmsg output: https://gist.github.com/2d0c673ae9b863e88b0d
+
 If you stumple over this and are interested to help then feel free to contact me.
 
 I won't guarantee that I continue to work on this.
@@ -30,3 +32,6 @@ I won't guarantee that I continue to work on this.
  * gpio_tlmm_config(0x0002c390, GPIO_CFG_ENABLE) <?> failed: -5
    pin 57 func 0 dir 1 pull 1 drvstr 1
    caused by bt_gpio_table (BRAVO_GPIO_BT_WAKE)
+ * Enabling pm causes the system to hang
+   Hangs inside msm_timer_enter_idle
+   Also last_kmsg does not exist after reboot for some reason
