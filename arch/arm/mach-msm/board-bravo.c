@@ -697,29 +697,38 @@ static struct msm_pm_boot_platform_data msm_pm_boot_pdata __initdata = {
 	.v_addr = (unsigned int *)PAGE_OFFSET,
 };
 
+static struct msm_gpio msm_i2c_gpios_hw[] = {
+	{ GPIO_CFG(95, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_pri_clk" },
+	{ GPIO_CFG(96, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_pri_dat" },
+	{ GPIO_CFG(60, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_sec_clk" },
+	{ GPIO_CFG(61, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_sec_dat" },
+};
+
+static struct msm_gpio msm_i2c_gpios_io[] = {
+	{ GPIO_CFG(95, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_pri_clk" },
+	{ GPIO_CFG(96, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_pri_dat" },
+	{ GPIO_CFG(60, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_sec_clk" },
+	{ GPIO_CFG(61, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), "i2c_sec_dat" },
+};
+
 static void
 msm_i2c_gpio_config(int iface, int config_type)
 {
-	int gpio_scl;
-	int gpio_sda;
-	if (iface) {
-		gpio_scl = 60;
-		gpio_sda = 61;
-	} else {
-		gpio_scl = 95;
-		gpio_sda = 96;
-	}
-	if (config_type) {
-		gpio_tlmm_config(GPIO_CFG(gpio_scl, 1, GPIO_CFG_INPUT,
-					GPIO_CFG_NO_PULL, GPIO_CFG_16MA), GPIO_CFG_ENABLE);
-		gpio_tlmm_config(GPIO_CFG(gpio_sda, 1, GPIO_CFG_INPUT,
-					GPIO_CFG_NO_PULL, GPIO_CFG_16MA), GPIO_CFG_ENABLE);
-	} else {
-		gpio_tlmm_config(GPIO_CFG(gpio_scl, 0, GPIO_CFG_OUTPUT,
-					GPIO_CFG_NO_PULL, GPIO_CFG_16MA), GPIO_CFG_ENABLE);
-		gpio_tlmm_config(GPIO_CFG(gpio_sda, 0, GPIO_CFG_OUTPUT,
-					GPIO_CFG_NO_PULL, GPIO_CFG_16MA), GPIO_CFG_ENABLE);
-	}
+	int rc = 0;
+	struct msm_gpio *msm_i2c_table;
+	printk("%s\n", __func__);
+	if(iface > 1)
+		return;
+
+	if(config_type)
+		msm_i2c_table = &msm_i2c_gpios_hw[iface*2];
+	else
+		msm_i2c_table = &msm_i2c_gpios_io[iface*2];
+
+	rc = msm_gpios_enable(msm_i2c_table, 2);
+	if (rc < 0)
+		printk(KERN_ERR "GPIO enable failed: %d (iface: %d, config: %d)\n",
+			rc, iface, config_type);
 }
 
 static struct msm_i2c_platform_data msm_i2c_pdata = {
@@ -772,14 +781,9 @@ static struct msm_pm_platform_data msm_pm_data[MSM_PM_SLEEP_MODE_NR] = {
 
 static void __init msm_device_i2c_init(void)
 {
-	if (gpio_request(95, "i2c_pri_clk"))
-		pr_err("failed to request gpio i2c_pri_clk\n");
-	if (gpio_request(96, "i2c_pri_dat"))
-		pr_err("failed to request gpio i2c_pri_dat\n");
-	if (gpio_request(60, "i2c_sec_clk"))
-		pr_err("failed to request gpio i2c_sec_clk\n");
-	if (gpio_request(61, "i2c_sec_dat"))
-		pr_err("failed to request gpio i2c_sec_dat\n");
+	printk("%s\n", __func__);
+	if (msm_gpios_request(msm_i2c_gpios_hw, ARRAY_SIZE(msm_i2c_gpios_hw)))
+		pr_err("failed to request I2C gpios\n");
 
 	msm_i2c_pdata.rmutex = 1;
 	msm_i2c_pdata.pm_lat =
